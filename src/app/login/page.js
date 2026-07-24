@@ -46,8 +46,8 @@ export default function LoginPage() {
       <div style={styles.card}>
         <div style={styles.glow} />
         <div style={styles.logoWrap}>
-          <Image src="/logo-master-joias.jpg" alt="Master Joias" width={92} height={92} style={{ objectFit: 'contain' }} priority />
-        </div>
+  <Image src="/logo-master-joias.png" alt="Master Joias" width={300} height={176} style={{ objectFit: 'contain' }} priority />
+</div>
         <div style={styles.subtitle}>Acesse o sistema de gestão</div>
 
         <form onSubmit={handleLogin} style={{ marginTop: 28 }}>
@@ -109,19 +109,13 @@ const styles = {
     width: 260, height: 160, background: 'radial-gradient(closest-side, rgba(184,147,90,.25), transparent)',
     pointerEvents: 'none',
   },
-  logoWrap: {
-    position: 'relative',
-    width: 108,
-    height: 108,
-    borderRadius: '50%',
-    background: '#fff',
-    border: '1px solid #E7E2D9',
-    boxShadow: '0 0 0 6px #FAF3E7, 0 8px 24px rgba(184,147,90,.25)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: '0 auto 18px',
-  },
+ logoWrap: {
+  width: 300,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  margin: '0 auto 8px',
+},
   subtitle: {
     fontSize: 12.5,
     color: '#726A5D',

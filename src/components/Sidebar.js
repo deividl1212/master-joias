@@ -59,8 +59,8 @@ export default function Sidebar({ collapsed, onToggle, mobileOpen, onCloseMobile
     <aside className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' mobile-open' : ''}`}>
       <div style={styles.head}>
         <div style={styles.logoBadge}>
-          <Image src="/logo-master-joias.jpg" alt="Master Joias" width={44} height={44} style={{ objectFit: 'contain', display: 'block' }} />
-        </div>
+  <Image src="/logo-master-joias.png" alt="Master Joias" width={40} height={47} style={{ objectFit: 'contain', display: 'block' }} />
+</div>
         {!collapsed && <div style={styles.full}>MASTER JOIAS</div>}
       </div>
 
@@ -106,10 +106,8 @@ const styles = {
     borderBottom: '1px solid rgba(255,255,255,.08)', whiteSpace: 'nowrap',
   },
   logoBadge: {
-    width: 46, height: 46, borderRadius: 12, background: '#fff', border: '1px solid #B8935A',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, padding: 4,
-    boxShadow: '0 0 0 3px rgba(184,147,90,.15)',
-  },
+  width: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+},
   full: { fontSize: 12, letterSpacing: 2.5, fontWeight: 700, color: '#D9BD8C' },
   nav: { flex: 1, padding: '14px 12px', overflowY: 'auto' },
   navLabel: {
