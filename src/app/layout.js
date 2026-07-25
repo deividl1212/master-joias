@@ -3,6 +3,15 @@ import './globals.css';
 export const metadata = {
   title: 'Master Joias — Sistema de Gestão',
   description: 'Sistema de gestão da Master Joias',
+  manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
+};
+
+export const viewport = {
+  themeColor: '#1B1A18',
 };
 
 export default function RootLayout({ children }) {
