@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Toast from '@/components/ui/Toast';
 import { useToasts } from '@/hooks/useToasts';
@@ -36,17 +36,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
   const [excluindoVenda, setExcluindoVenda] = useState(false);
   const [modalConfirmar, setModalConfirmar] = useState(false);
   const [recibo, setRecibo] = useState(null);
-  const [reciboParaImprimir, setReciboParaImprimir] = useState(null);
-
-  useEffect(() => {
-    if (reciboParaImprimir) {
-      const t = setTimeout(() => {
-        window.print();
-        setReciboParaImprimir(null);
-      }, 150);
-      return () => clearTimeout(t);
-    }
-  }, [reciboParaImprimir]);
+  const printAreaRef = useRef(null);
 
   const resultados = useMemo(() => {
     if (!busca.trim()) return [];
@@ -90,7 +80,15 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
     showToast('Sangria registrada com sucesso.');
   }
 
- async function confirmarExcluirVenda() {
+  async function confirmarFecharCaixa() {
+    const { error } = await supabase.from('caixa').update({ aberto: false, fechado_em: new Date().toISOString() }).eq('id', caixa.id);
+    if (error) { showToast('Erro ao fechar caixa: ' + error.message, 'error'); return; }
+    setCaixa(null);
+    setModalFechar(false);
+    showToast('Caixa fechado com sucesso.');
+  }
+
+  async function confirmarExcluirVenda() {
     setExcluindoVenda(true);
     const venda = modalExcluirVenda;
 
@@ -209,8 +207,34 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
   }
 
   function imprimirRecibo(venda, itens) {
-    setReciboParaImprimir({ venda, itens: itens || [] });
+    const listaItens = itens || [];
+    const linhasItens = listaItens.map((i) =>
+      `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${i.qty || i.quantidade}x ${i.nome || i.nome_produto}</span><span>${brl((i.preco || i.preco_unitario) * (i.qty || i.quantidade))}</span></div>`
+    ).join('');
+    const html = `
+      <div style="font-family:Inter,sans-serif; width:280px; padding:14px;">
+        <div style="text-align:center; font-weight:800; font-size:15px;">MASTER JOIAS</div>
+        <div style="text-align:center; font-size:11px; color:#726A5D;">${new Date(venda.criado_em || Date.now()).toLocaleString('pt-BR')}</div>
+        <hr>
+        <div style="font-size:12px;">Cliente: ${venda.cliente_nome}</div>
+        <div style="font-size:12px;">Pagamento: ${venda.pagamento}${venda.parcelas > 1 ? ` (${venda.parcelas}x de ${brl(venda.total / venda.parcelas)})` : ''}</div>
+        <hr>
+        ${linhasItens}
+        <hr>
+        <div style="display:flex;justify-content:space-between;font-size:12px;"><span>Subtotal</span><span>${brl(venda.subtotal)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;"><span>Desconto</span><span>- ${brl(venda.desconto)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;"><span>Acréscimo</span><span>+ ${brl(venda.acrescimo)}</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;margin-top:6px;"><span>Total</span><span>${brl(venda.total)}</span></div>
+        <hr>
+        <div style="text-align:center;font-size:11px;color:#726A5D;">Obrigado pela preferência!</div>
+      </div>
+    `;
+    if (printAreaRef.current) {
+      printAreaRef.current.innerHTML = html;
+    }
+    window.print();
   }
+
   return (
     <div>
       <Toast toasts={toasts} />
@@ -225,8 +249,8 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
         </div>
       </div>
 
-      <div className="pdv-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 18, alignItems: 'start' }}>
-        <div>
+      <div className="pdv-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gridTemplateRows: 'auto auto', gap: 18, alignItems: 'start' }}>
+        <div className="pdv-col-busca" style={{ gridColumn: '1', gridRow: '1' }}>
           <input
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
@@ -249,42 +273,10 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
               </div>
             ))}
           </div>
-
-          <div style={{ ...ui.panel, marginTop: 18 }}>
-           <div style={{ padding: '16px 18px', borderBottom: '1px solid #E7E2D9', fontWeight: 700, fontSize: 14 }}>Últimas vendas</div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={ui.table}>
-                <thead><tr>{['Data', 'Hora', 'Cliente', 'Produtos', 'Total', 'Pagamento', ''].map((h) => <th key={h} style={ui.th}>{h}</th>)}</tr></thead>
-                <tbody>
-                  {ultimasVendas.length === 0 ? (
-                    <tr><td colSpan={7} style={ui.emptyCell}>Nenhuma venda registrada ainda.</td></tr>
-                  ) : ultimasVendas.map((v) => (
-                    <tr key={v.id}>
-                      <td style={ui.td}>{new Date(v.criado_em).toLocaleDateString('pt-BR')}</td>
-                      <td style={ui.td}>{new Date(v.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
-                      <td style={{ ...ui.td, fontWeight: 600 }}>{v.cliente_nome}</td>
-                      <td style={{ ...ui.td, whiteSpace: 'normal', maxWidth: 220 }}>
-                        {(v.venda_itens || []).map((i) => `${i.quantidade}x ${i.nome_produto}`).join(', ')}
-                      </td>
-                      <td style={ui.td}>{brl(v.total)}</td>
-                      <td style={ui.td}>{v.pagamento}</td>
-                      <td style={ui.td}>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button title="Visualizar comprovante" onClick={() => setRecibo({ ...v, itens: v.venda_itens })} style={ui.iconBtn}>👁</button>
-                          <button title="Imprimir comprovante" onClick={() => imprimirRecibo(v, v.venda_itens)} style={ui.iconBtn}>▤</button>
-                          <button title="Excluir venda" onClick={() => setModalExcluirVenda(v)} style={{ ...ui.iconBtn, color: '#A85252' }}>✕</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          </div>
+        </div>
 
         {/* CARRINHO */}
-        <div style={{ ...ui.panel, border: '1.5px solid #B8935A', position: 'sticky', top: 84 }}>
+        <div className="pdv-col-carrinho" style={{ ...ui.panel, border: '1.5px solid #B8935A', position: 'sticky', top: 84, gridColumn: '2', gridRow: '1 / span 2' }}>
           <div style={{ background: '#1B1A18', color: '#fff', padding: '14px 18px', display: 'flex', justifyContent: 'space-between' }}>
             <b style={{ fontSize: 13, letterSpacing: 1 }}>CARRINHO</b>
             <span style={{ fontSize: 11.5 }}>{cart.reduce((s, i) => s + i.qty, 0)} itens</span>
@@ -351,6 +343,38 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
             <button onClick={abrirConfirmacao} style={{ ...ui.btnGold, width: '100%', marginTop: 14, padding: 14 }}>Finalizar venda</button>
           </div>
         </div>
+
+        <div className="pdv-col-vendas" style={{ ...ui.panel, gridColumn: '1', gridRow: '2' }}>
+          <div style={{ padding: '16px 18px', borderBottom: '1px solid #E7E2D9', fontWeight: 700, fontSize: 14 }}>Últimas vendas</div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={ui.table}>
+              <thead><tr>{['Data', 'Hora', 'Cliente', 'Produtos', 'Total', 'Pagamento', ''].map((h) => <th key={h} style={ui.th}>{h}</th>)}</tr></thead>
+              <tbody>
+                {ultimasVendas.length === 0 ? (
+                  <tr><td colSpan={7} style={ui.emptyCell}>Nenhuma venda registrada ainda.</td></tr>
+                ) : ultimasVendas.map((v) => (
+                  <tr key={v.id}>
+                    <td style={ui.td}>{new Date(v.criado_em).toLocaleDateString('pt-BR')}</td>
+                    <td style={ui.td}>{new Date(v.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
+                    <td style={{ ...ui.td, fontWeight: 600 }}>{v.cliente_nome}</td>
+                    <td style={{ ...ui.td, whiteSpace: 'normal', maxWidth: 220 }}>
+                      {(v.venda_itens || []).map((i) => `${i.quantidade}x ${i.nome_produto}`).join(', ')}
+                    </td>
+                    <td style={ui.td}>{brl(v.total)}</td>
+                    <td style={ui.td}>{v.pagamento}</td>
+                    <td style={ui.td}>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button title="Visualizar comprovante" onClick={() => setRecibo({ ...v, itens: v.venda_itens })} style={ui.iconBtn}>👁</button>
+                        <button title="Imprimir comprovante" onClick={() => imprimirRecibo(v, v.venda_itens)} style={ui.iconBtn}>▤</button>
+                        <button title="Excluir venda" onClick={() => setModalExcluirVenda(v)} style={{ ...ui.iconBtn, color: '#A85252' }}>✕</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       {/* MODAL ABRIR CAIXA */}
@@ -406,7 +430,8 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
           </div>
         </div>
       )}
-{/* MODAL EXCLUIR VENDA */}
+
+      {/* MODAL EXCLUIR VENDA */}
       {modalExcluirVenda && (
         <div style={ui.overlay} onClick={() => setModalExcluirVenda(null)}>
           <div onClick={(e) => e.stopPropagation()} style={ui.modalNarrow}>
@@ -425,6 +450,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
           </div>
         </div>
       )}
+
       {/* MODAL CONFIRMAR VENDA */}
       {modalConfirmar && (
         <div style={ui.overlay} onClick={() => !processando && setModalConfirmar(false)}>
@@ -478,38 +504,10 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
           </div>
         </div>
       )}
-    {/* ÁREA DE IMPRESSÃO — fica escondida na tela, só aparece no papel/PDF de impressão.
-          Não abre aba nova, então não trava a navegação no celular. */}
-      <div id="print-area">
-        {reciboParaImprimir && (
-          <div style={{ fontFamily: 'Inter, sans-serif', width: 280, padding: 14 }}>
-            <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 15 }}>MASTER JOIAS</div>
-            <div style={{ textAlign: 'center', fontSize: 11, color: '#726A5D' }}>
-              {new Date(reciboParaImprimir.venda.criado_em || Date.now()).toLocaleString('pt-BR')}
-            </div>
-            <hr />
-            <div style={{ fontSize: 12 }}>Cliente: {reciboParaImprimir.venda.cliente_nome}</div>
-            <div style={{ fontSize: 12 }}>
-              Pagamento: {reciboParaImprimir.venda.pagamento}
-              {reciboParaImprimir.venda.parcelas > 1 ? ` (${reciboParaImprimir.venda.parcelas}x de ${brl(reciboParaImprimir.venda.total / reciboParaImprimir.venda.parcelas)})` : ''}
-            </div>
-            <hr />
-            {reciboParaImprimir.itens.map((i, idx) => (
-              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2px 0' }}>
-                <span>{i.qty || i.quantidade}x {i.nome || i.nome_produto}</span>
-                <span>{brl((i.preco || i.preco_unitario) * (i.qty || i.quantidade))}</span>
-              </div>
-            ))}
-            <hr />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>Subtotal</span><span>{brl(reciboParaImprimir.venda.subtotal)}</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>Desconto</span><span>- {brl(reciboParaImprimir.venda.desconto)}</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>Acréscimo</span><span>+ {brl(reciboParaImprimir.venda.acrescimo)}</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17, fontWeight: 800, marginTop: 6 }}><span>Total</span><span>{brl(reciboParaImprimir.venda.total)}</span></div>
-            <hr />
-            <div style={{ textAlign: 'center', fontSize: 11, color: '#726A5D' }}>Obrigado pela preferência!</div>
-          </div>
-        )}
-      </div>
+      {/* ÁREA DE IMPRESSÃO — fica escondida na tela, só aparece no papel/PDF de impressão.
+          O conteúdo é injetado direto via ref no exato instante do clique (sem delay),
+          o que evita o bloqueio de "impressão automática" do Safari no iPhone. */}
+      <div id="print-area" ref={printAreaRef}></div>
     </div>
   );
 }
