@@ -69,7 +69,7 @@ export default function RelatoriosClient() {
     const html = `
       <div style="font-family:Inter,sans-serif; padding:28px; max-width:700px; margin:0 auto;">
         <div style="display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:22px;">
-          <img src="/logo-master-joias.png" alt="Master Joias" style="height:56px; object-fit:contain; margin-bottom:10px;" />
+         <img src="/logo-master-joias.png" alt="Master Joias" style="height:80px; object-fit:contain; margin-bottom:10px;" />
           <h2 style="margin:0; font-size:18px;">${tipoAtual.label}</h2>
           <div style="font-size:12px; color:#726A5D; margin-top:2px;">Relatório gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
         </div>
