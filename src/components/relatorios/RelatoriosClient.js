@@ -21,18 +21,7 @@ export default function RelatoriosClient() {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [gerado, setGerado] = useState(false);
-  const [imprimindo, setImprimindo] = useState(false);
-
-  useEffect(() => {
-    if (imprimindo) {
-      const t = setTimeout(() => {
-        window.print();
-        setImprimindo(false);
-      }, 150);
-      return () => clearTimeout(t);
-    }
-  }, [imprimindo]);
-
+  const printAreaRef = useRef(null);
   const tipoAtual = TIPOS.find((t) => t.id === tipo);
 
   async function gerar() {
@@ -164,23 +153,7 @@ export default function RelatoriosClient() {
         )}
      </div>
 
-      <div id="print-area">
-        {imprimindo && (
-          <div style={{ fontFamily: 'Inter, sans-serif', padding: 20 }}>
-            <h2>Master Joias — {tipoAtual.label}</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr>{tipoAtual.head.map((h) => <th key={h} style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 6 }}>{h}</th>)}</tr>
-              </thead>
-              <tbody>
-                {linhas.map((l, i) => (
-                  <tr key={i}>{l.map((c, j) => <td key={j} style={{ padding: 6, borderBottom: '1px solid #eee' }}>{c}</td>)}</tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+     <div id="print-area" ref={printAreaRef}></div>
     </div>
   );
 }
