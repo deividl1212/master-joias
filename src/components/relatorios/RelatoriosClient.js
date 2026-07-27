@@ -64,7 +64,37 @@ export default function RelatoriosClient() {
   }
 
   function imprimir() {
-    setImprimindo(true);
+    const linhasHtml = linhas.map((l) =>
+      `<tr>${l.map((c) => `<td style="padding:8px 6px;border-bottom:1px solid #eee;">${c}</td>`).join('')}</tr>`
+    ).join('');
+
+    // total geral em negrito no final, quando o relatório for de vendas (soma a coluna "Total", que é a última)
+    let linhaTotal = '';
+    if (tipo === 'vendas' && linhas.length > 0) {
+      const totalGeral = linhas.reduce((s, l) => {
+        const valorNum = parseFloat(String(l[l.length - 1]).replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+        return s + (isNaN(valorNum) ? 0 : valorNum);
+      }, 0);
+      linhaTotal = `<tr><td colspan="${tipoAtual.head.length - 1}" style="padding:10px 6px; text-align:right; font-weight:800; border-top:2px solid #1B1A18;">Total geral</td><td style="padding:10px 6px; font-weight:800; border-top:2px solid #1B1A18;">${brl(totalGeral)}</td></tr>`;
+    }
+
+    const html = `
+      <div style="font-family:Inter,sans-serif; padding:28px; max-width:700px; margin:0 auto;">
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; margin-bottom:22px;">
+          <img src="/logo-master-joias.png" alt="Master Joias" style="height:56px; object-fit:contain; margin-bottom:10px;" />
+          <h2 style="margin:0; font-size:18px;">${tipoAtual.label}</h2>
+          <div style="font-size:12px; color:#726A5D; margin-top:2px;">Relatório gerado em ${new Date().toLocaleDateString('pt-BR')}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr>${tipoAtual.head.map((h) => `<th style="text-align:left;border-bottom:2px solid #1B1A18;padding:8px 6px;">${h}</th>`).join('')}</tr></thead>
+          <tbody>${linhasHtml}${linhaTotal}</tbody>
+        </table>
+      </div>
+    `;
+    if (printAreaRef.current) {
+      printAreaRef.current.innerHTML = html;
+    }
+    window.print();
   }
 
   function exportarCsv() {
@@ -117,6 +147,17 @@ export default function RelatoriosClient() {
                 ) : linhas.map((l, i) => (
                   <tr key={i}>{l.map((c, j) => <td key={j} style={ui.td}>{c}</td>)}</tr>
                 ))}
+                {tipo === 'vendas' && linhas.length > 0 && (
+                  <tr>
+                    <td colSpan={tipoAtual.head.length - 1} style={{ ...ui.td, textAlign: 'right', fontWeight: 800, borderTop: '2px solid #1B1A18' }}>Total geral</td>
+                    <td style={{ ...ui.td, fontWeight: 800, borderTop: '2px solid #1B1A18' }}>
+                      {brl(linhas.reduce((s, l) => {
+                        const n = parseFloat(String(l[l.length - 1]).replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+                        return s + (isNaN(n) ? 0 : n);
+                      }, 0))}
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
