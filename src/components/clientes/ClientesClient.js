@@ -15,7 +15,7 @@ export default function ClientesClient({ clientesIniciais, erroCarregamento }) {
   const [modalNovo, setModalNovo] = useState(false);
   const [modalExcluir, setModalExcluir] = useState(null);
   const [salvando, setSalvando] = useState(false);
-  const [form, setForm] = useState({ nome: '', telefone: '', cidade: '' });
+  const [form, setForm] = useState({ nome: '', telefone: '', cidade: '', ultima_compra: '', valor: '' });
 
   async function recarregar() {
     const { data } = await supabase.from('clientes').select('*').order('criado_em', { ascending: false });
@@ -32,7 +32,7 @@ export default function ClientesClient({ clientesIniciais, erroCarregamento }) {
   }, [clientes, busca]);
 
   function abrirNovo() {
-    setForm({ nome: '', telefone: '', cidade: '' });
+    setForm({ nome: '', telefone: '', cidade: '', ultima_compra: '', valor: '' });
     setModalNovo(true);
   }
 
@@ -44,6 +44,8 @@ export default function ClientesClient({ clientesIniciais, erroCarregamento }) {
       nome: form.nome.trim(),
       telefone: form.telefone.trim(),
       cidade: form.cidade.trim(),
+      ultima_compra: form.ultima_compra || null,
+      total_gasto: parseFloat(form.valor) || 0,
     });
     setSalvando(false);
     if (error) { showToast('Erro ao salvar cliente: ' + error.message, 'error'); return; }
@@ -131,6 +133,17 @@ export default function ClientesClient({ clientesIniciais, erroCarregamento }) {
               <div style={ui.field}>
                 <label style={ui.label}>Cidade</label>
                 <input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} style={ui.input} placeholder="Cidade - UF" />
+              </div>
+              <div style={ui.row2}>
+                <div style={ui.field}>
+                  <label style={ui.label}>Última compra (opcional)</label>
+                  <input type="date" value={form.ultima_compra} onChange={(e) => setForm({ ...form, ultima_compra: e.target.value })} style={ui.input} />
+                  <div style={ui.hint}>Preencha se o cliente já comprava antes do sistema.</div>
+                </div>
+                <div style={ui.field}>
+                  <label style={ui.label}>Valor total gasto (R$)</label>
+                  <input type="number" step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} style={ui.input} placeholder="0,00" />
+                </div>
               </div>
             </div>
             <div style={ui.modalFoot}>
