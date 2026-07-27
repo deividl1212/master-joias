@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { ui, brl } from '@/lib/uiStyles';
 
@@ -57,7 +57,6 @@ export default function RelatoriosClient() {
       `<tr>${l.map((c) => `<td style="padding:8px 6px;border-bottom:1px solid #eee;">${c}</td>`).join('')}</tr>`
     ).join('');
 
-    // total geral em negrito no final, quando o relatório for de vendas (soma a coluna "Total", que é a última)
     let linhaTotal = '';
     if (tipo === 'vendas' && linhas.length > 0) {
       const totalGeral = linhas.reduce((s, l) => {
@@ -151,9 +150,9 @@ export default function RelatoriosClient() {
             </table>
           </div>
         )}
-     </div>
+      </div>
 
-     <div id="print-area" ref={printAreaRef}></div>
+      <div id="print-area" ref={printAreaRef}></div>
     </div>
   );
 }
