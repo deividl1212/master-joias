@@ -298,22 +298,18 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
             {cart.length === 0 ? (
               <div style={ui.emptyCell}>Nenhum produto adicionado</div>
             ) : cart.map((item, idx) => (
-              <div key={item.produto_id} style={{ padding: '10px 0', borderBottom: '1px dashed #E7E2D9' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 13 }}>{item.nome}</div>
-                    <div style={{ fontSize: 11, color: '#9C9184' }}>{brl(item.preco)} un.</div>
-                  </div>
-                  <button onClick={() => removeItem(idx)} style={{ ...ui.iconBtn, color: '#A85252', height: 24, width: 24 }}>✕</button>
+              <div key={item.produto_id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, rowGap: 10, padding: '14px', marginBottom: 10, border: '1px solid #E7E2D9', borderRadius: 12, background: '#FAF8F5' }}>
+                <div style={{ flex: '1 1 140px', minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.nome}</div>
+                  <div style={{ fontSize: 11.5, color: '#9C9184' }}>{brl(item.preco)} un.</div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #D6CFC2', borderRadius: 8 }}>
-                    <button onClick={() => changeQty(idx, -1)} style={{ border: 'none', background: 'none', width: 22, cursor: 'pointer' }}>−</button>
-                    <span style={{ fontSize: 12.5, fontWeight: 600 }}>{item.qty}</span>
-                    <button onClick={() => changeQty(idx, 1)} style={{ border: 'none', background: 'none', width: 22, cursor: 'pointer' }}>+</button>
-                  </div>
-                  <div style={{ fontWeight: 600 }}>{brl(item.preco * item.qty)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #D6CFC2', borderRadius: 10, background: '#fff', padding: '4px 6px', flexShrink: 0 }}>
+                  <button onClick={() => changeQty(idx, -1)} style={{ border: 'none', background: 'none', width: 26, height: 26, borderRadius: 6, cursor: 'pointer', fontSize: 15, color: '#4B453C' }}>−</button>
+                  <span style={{ fontSize: 13.5, fontWeight: 700, minWidth: 18, textAlign: 'center' }}>{item.qty}</span>
+                  <button onClick={() => changeQty(idx, 1)} style={{ border: 'none', background: 'none', width: 26, height: 26, borderRadius: 6, cursor: 'pointer', fontSize: 15, color: '#4B453C' }}>+</button>
                 </div>
+                <div style={{ fontWeight: 700, fontSize: 14.5, minWidth: 70, textAlign: 'right', flexShrink: 0 }}>{brl(item.preco * item.qty)}</div>
+                <button onClick={() => removeItem(idx)} style={{ ...ui.iconBtn, color: '#A85252', height: 28, width: 28, flexShrink: 0 }}>✕</button>
               </div>
             ))}
 
