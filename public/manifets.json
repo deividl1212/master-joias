@@ -2,7 +2,7 @@
   "name": "Master Joias — Sistema de Gestão",
   "short_name": "Master Joias",
   "description": "Sistema de gestão da loja Master Joias",
-  "start_url": "/dashboard",
+  "start_url": "/pdv",
   "display": "standalone",
   "background_color": "#FAF8F5",
   "theme_color": "#1B1A18",
