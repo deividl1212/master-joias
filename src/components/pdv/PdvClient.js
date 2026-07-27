@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Toast from '@/components/ui/Toast';
 import { useToasts } from '@/hooks/useToasts';
@@ -34,6 +34,17 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
   const [modalFechar, setModalFechar] = useState(false);
   const [modalConfirmar, setModalConfirmar] = useState(false);
   const [recibo, setRecibo] = useState(null);
+  const [reciboParaImprimir, setReciboParaImprimir] = useState(null);
+
+  useEffect(() => {
+    if (reciboParaImprimir) {
+      const t = setTimeout(() => {
+        window.print();
+        setReciboParaImprimir(null);
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [reciboParaImprimir]);
 
   const resultados = useMemo(() => {
     if (!busca.trim()) return [];
@@ -174,33 +185,8 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
   }
 
   function imprimirRecibo(venda, itens) {
-    const w = window.open('', '_blank', 'width=340,height=520');
-    const linhasItens = (itens || []).map((i) =>
-      `<div style="display:flex;justify-content:space-between;font-size:12px;padding:2px 0;"><span>${i.qty || i.quantidade}x ${i.nome || i.nome_produto}</span><span>${brl((i.preco || i.preco_unitario) * (i.qty || i.quantidade))}</span></div>`
-    ).join('');
-    w.document.write(`
-      <html><head><title>Comprovante</title></head>
-      <body style="font-family:Inter,sans-serif; padding:14px; width:260px;">
-        <div style="text-align:center; font-weight:800; font-size:15px;">MASTER JOIAS</div>
-        <div style="text-align:center; font-size:11px; color:#726A5D;">${new Date(venda.criado_em || Date.now()).toLocaleString('pt-BR')}</div>
-        <hr>
-        <div style="font-size:12px;">Cliente: ${venda.cliente_nome}</div>
-        <div style="font-size:12px;">Pagamento: ${venda.pagamento}${venda.parcelas > 1 ? ` (${venda.parcelas}x de ${brl(venda.total / venda.parcelas)})` : ''}</div>
-        <hr>
-        ${linhasItens}
-        <hr>
-        <div style="display:flex;justify-content:space-between;font-size:12px;"><span>Subtotal</span><span>${brl(venda.subtotal)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;"><span>Desconto</span><span>- ${brl(venda.desconto)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;"><span>Acréscimo</span><span>+ ${brl(venda.acrescimo)}</span></div>
-        <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:800;margin-top:6px;"><span>Total</span><span>${brl(venda.total)}</span></div>
-        <hr>
-        <div style="text-align:center;font-size:11px;color:#726A5D;">Obrigado pela preferência!</div>
-      </body></html>
-    `);
-    w.document.close();
-    setTimeout(() => w.print(), 200);
+    setReciboParaImprimir({ venda, itens: itens || [] });
   }
-
   return (
     <div>
       <Toast toasts={toasts} />
@@ -425,6 +411,38 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
           </div>
         </div>
       )}
+    {/* ÁREA DE IMPRESSÃO — fica escondida na tela, só aparece no papel/PDF de impressão.
+          Não abre aba nova, então não trava a navegação no celular. */}
+      <div id="print-area">
+        {reciboParaImprimir && (
+          <div style={{ fontFamily: 'Inter, sans-serif', width: 280, padding: 14 }}>
+            <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 15 }}>MASTER JOIAS</div>
+            <div style={{ textAlign: 'center', fontSize: 11, color: '#726A5D' }}>
+              {new Date(reciboParaImprimir.venda.criado_em || Date.now()).toLocaleString('pt-BR')}
+            </div>
+            <hr />
+            <div style={{ fontSize: 12 }}>Cliente: {reciboParaImprimir.venda.cliente_nome}</div>
+            <div style={{ fontSize: 12 }}>
+              Pagamento: {reciboParaImprimir.venda.pagamento}
+              {reciboParaImprimir.venda.parcelas > 1 ? ` (${reciboParaImprimir.venda.parcelas}x de ${brl(reciboParaImprimir.venda.total / reciboParaImprimir.venda.parcelas)})` : ''}
+            </div>
+            <hr />
+            {reciboParaImprimir.itens.map((i, idx) => (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, padding: '2px 0' }}>
+                <span>{i.qty || i.quantidade}x {i.nome || i.nome_produto}</span>
+                <span>{brl((i.preco || i.preco_unitario) * (i.qty || i.quantidade))}</span>
+              </div>
+            ))}
+            <hr />
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>Subtotal</span><span>{brl(reciboParaImprimir.venda.subtotal)}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>Desconto</span><span>- {brl(reciboParaImprimir.venda.desconto)}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}><span>Acréscimo</span><span>+ {brl(reciboParaImprimir.venda.acrescimo)}</span></div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 17, fontWeight: 800, marginTop: 6 }}><span>Total</span><span>{brl(reciboParaImprimir.venda.total)}</span></div>
+            <hr />
+            <div style={{ textAlign: 'center', fontSize: 11, color: '#726A5D' }}>Obrigado pela preferência!</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

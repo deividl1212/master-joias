@@ -60,4 +60,14 @@ html, body { margin: 0; padding: 0; }
 }
 @media (max-width: 480px) {
   .kpi-grid-responsive { grid-template-columns: 1fr !important; }
+
+}
+/* ===== Impressão (sem abrir aba nova — evita travar a navegação no celular) ===== */
+#print-area { position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: hidden; }
+@media print {
+  body * { visibility: hidden; }
+  #print-area, #print-area * { visibility: visible; }
+  #print-area {
+    position: absolute; top: 0; left: 0; width: 100%; height: auto; overflow: visible;
+  }
 }
