@@ -1,5 +1,5 @@
 * { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
+html, body { margin: 0; padding: 0; overflow-x: hidden; max-width: 100vw; }
 
 /* Barra de rolagem discreta (menu lateral e no geral) */
 * {
@@ -56,6 +56,9 @@ html, body { margin: 0; padding: 0; }
   .content-pad { padding: 16px !important; }
   .table-wrap-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .pdv-grid-responsive { grid-template-columns: 1fr !important; }
+  .pdv-grid-responsive > div { min-width: 0; }
+  .pdv-grid-responsive > div:first-child { order: 2; }
+  .pdv-grid-responsive > div:last-child { order: 1; margin-bottom: 18px; }
   .row2-responsive { grid-template-columns: 1fr !important; }
 }
 @media (max-width: 480px) {

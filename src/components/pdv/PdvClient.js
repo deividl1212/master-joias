@@ -215,10 +215,10 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
     <div>
       <Toast toasts={toasts} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: '#726A5D', marginBottom: 14 }}>
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: caixa ? '#5B7B5A' : '#D6CFC2' }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, fontSize: 12, color: '#726A5D', marginBottom: 14 }}>
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: caixa ? '#5B7B5A' : '#D6CFC2', flexShrink: 0 }} />
         {caixa ? `Caixa aberto · Fundo: ${brl(caixa.valor_inicial)}` : 'Caixa fechado'}
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {!caixa && <button onClick={() => setModalAbrirCaixa(true)} style={ui.btnOutline}>Abrir caixa</button>}
           {caixa && <button onClick={() => setModalSangria(true)} style={ui.btnOutline}>Sangria</button>}
           {caixa && <button onClick={() => setModalFechar(true)} style={{ ...ui.btnOutline, color: '#A85252', borderColor: '#A85252' }}>Fechar caixa</button>}
