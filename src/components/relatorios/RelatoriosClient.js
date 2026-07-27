@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { ui, brl } from '@/lib/uiStyles';
 
@@ -21,6 +21,17 @@ export default function RelatoriosClient() {
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [gerado, setGerado] = useState(false);
+  const [imprimindo, setImprimindo] = useState(false);
+
+  useEffect(() => {
+    if (imprimindo) {
+      const t = setTimeout(() => {
+        window.print();
+        setImprimindo(false);
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [imprimindo]);
 
   const tipoAtual = TIPOS.find((t) => t.id === tipo);
 
@@ -53,17 +64,7 @@ export default function RelatoriosClient() {
   }
 
   function imprimir() {
-    const w = window.open('', '_blank');
-    w.document.write(`
-      <html><head><title>Relatório</title></head><body style="font-family:Inter,sans-serif;padding:20px;">
-      <h2>Master Joias — ${tipoAtual.label}</h2>
-      <table style="width:100%;border-collapse:collapse;font-size:13px;">
-        <thead><tr>${tipoAtual.head.map((h) => `<th style="text-align:left;border-bottom:1px solid #ccc;padding:6px;">${h}</th>`).join('')}</tr></thead>
-        <tbody>${linhas.map((l) => `<tr>${l.map((c) => `<td style="padding:6px;border-bottom:1px solid #eee;">${c}</td>`).join('')}</tr>`).join('')}</tbody>
-      </table></body></html>
-    `);
-    w.document.close();
-    setTimeout(() => w.print(), 200);
+    setImprimindo(true);
   }
 
   function exportarCsv() {
@@ -115,6 +116,24 @@ export default function RelatoriosClient() {
                   <tr><td colSpan={tipoAtual.head.length} style={ui.emptyCell}>Nenhum resultado encontrado.</td></tr>
                 ) : linhas.map((l, i) => (
                   <tr key={i}>{l.map((c, j) => <td key={j} style={ui.td}>{c}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+     </div>
+
+      <div id="print-area">
+        {imprimindo && (
+          <div style={{ fontFamily: 'Inter, sans-serif', padding: 20 }}>
+            <h2>Master Joias — {tipoAtual.label}</h2>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr>{tipoAtual.head.map((h) => <th key={h} style={{ textAlign: 'left', borderBottom: '1px solid #ccc', padding: 6 }}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {linhas.map((l, i) => (
+                  <tr key={i}>{l.map((c, j) => <td key={j} style={{ padding: 6, borderBottom: '1px solid #eee' }}>{c}</td>)}</tr>
                 ))}
               </tbody>
             </table>

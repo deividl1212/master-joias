@@ -240,7 +240,12 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
                       <td style={{ ...ui.td, fontWeight: 600 }}>{v.cliente_nome}</td>
                       <td style={ui.td}>{brl(v.total)}</td>
                       <td style={ui.td}>{v.pagamento}</td>
-                      <td style={ui.td}><button onClick={() => imprimirRecibo(v, v.venda_itens)} style={ui.iconBtn}>▤</button></td>
+                     <td style={ui.td}>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button title="Visualizar comprovante" onClick={() => setRecibo({ ...v, itens: v.venda_itens })} style={ui.iconBtn}>👁</button>
+                          <button title="Imprimir comprovante" onClick={() => imprimirRecibo(v, v.venda_itens)} style={ui.iconBtn}>▤</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -395,14 +400,33 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
         </div>
       )}
 
-      {/* MODAL RECIBO PÓS-VENDA */}
+      {/* MODAL COMPROVANTE (visualizar / pós-venda) */}
       {recibo && (
         <div style={ui.overlay} onClick={() => setRecibo(null)}>
           <div onClick={(e) => e.stopPropagation()} style={ui.modalNarrow}>
-            <div style={ui.modalHead}>Venda concluída ✓<button onClick={() => setRecibo(null)} style={ui.closeBtn}>✕</button></div>
+            <div style={ui.modalHead}>Comprovante<button onClick={() => setRecibo(null)} style={ui.closeBtn}>✕</button></div>
             <div style={ui.modalBody}>
-              Total: <b>{brl(recibo.total)}</b><br />
-              Cliente: {recibo.cliente_nome}
+              <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 15, marginBottom: 2 }}>MASTER JOIAS</div>
+              <div style={{ textAlign: 'center', fontSize: 11, color: '#9C9184', marginBottom: 10 }}>
+                {new Date(recibo.criado_em || Date.now()).toLocaleString('pt-BR')}
+              </div>
+              <div style={{ fontSize: 12.5 }}>Cliente: {recibo.cliente_nome}</div>
+              <div style={{ fontSize: 12.5, marginBottom: 8 }}>
+                Pagamento: {recibo.pagamento}
+                {recibo.parcelas > 1 ? ` (${recibo.parcelas}x de ${brl(recibo.total / recibo.parcelas)})` : ''}
+              </div>
+              <hr style={{ border: 'none', borderTop: '1px dashed #E7E2D9', margin: '8px 0' }} />
+              {(recibo.itens || []).map((i, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, padding: '3px 0' }}>
+                  <span>{i.qty || i.quantidade}x {i.nome || i.nome_produto}</span>
+                  <span>{brl((i.preco || i.preco_unitario) * (i.qty || i.quantidade))}</span>
+                </div>
+              ))}
+              <hr style={{ border: 'none', borderTop: '1px dashed #E7E2D9', margin: '8px 0' }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}><span>Subtotal</span><span>{brl(recibo.subtotal)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}><span>Desconto</span><span>- {brl(recibo.desconto)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5 }}><span>Acréscimo</span><span>+ {brl(recibo.acrescimo)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 18, fontWeight: 800, marginTop: 6 }}><span>Total</span><span>{brl(recibo.total)}</span></div>
             </div>
             <div style={ui.modalFoot}>
               <button onClick={() => setRecibo(null)} style={ui.btnGhost}>Fechar</button>

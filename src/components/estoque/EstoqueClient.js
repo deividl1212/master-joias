@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import Toast from '@/components/ui/Toast';
 import { useToasts } from '@/hooks/useToasts';
@@ -34,6 +34,25 @@ export default function EstoqueClient({ produtosIniciais, erroCarregamento }) {
   const [form, setForm] = useState({ nome: '', codigo: '', categoria: 'Anéis', marca: '', custo: '', venda: '', estoque: '' });
   const [novoSaldo, setNovoSaldo] = useState('');
   const previaBarcodeRef = useRef(null);
+  const etiquetaBarcodeRef = useRef(null);
+  const [etiquetaImprimir, setEtiquetaImprimir] = useState(null);
+
+  useEffect(() => {
+    if (etiquetaImprimir) {
+      (async () => {
+        const JsBarcode = (await import('jsbarcode')).default;
+        setTimeout(() => {
+          if (etiquetaBarcodeRef.current) {
+            JsBarcode(etiquetaBarcodeRef.current, etiquetaImprimir.codigo, { format: 'CODE128', width: 1.2, height: 26, fontSize: 9, margin: 2 });
+          }
+          setTimeout(() => {
+            window.print();
+            setEtiquetaImprimir(null);
+          }, 150);
+        }, 0);
+      })();
+    }
+  }, [etiquetaImprimir]);
 
   async function recarregar() {
     const { data } = await supabase.from('produtos').select('*').order('criado_em', { ascending: false });
@@ -136,21 +155,8 @@ export default function EstoqueClient({ produtosIniciais, erroCarregamento }) {
     recarregar();
   }
 
-  async function imprimirEtiqueta(p) {
-    const JsBarcode = (await import('jsbarcode')).default;
-    const printWindow = window.open('', '_blank', 'width=300,height=200');
-    printWindow.document.write(`
-      <html><head><title>Etiqueta</title></head>
-      <body style="font-family:Inter,sans-serif; text-align:center; margin:0; padding:6px;">
-        <div style="font-size:9px; font-weight:600; white-space:nowrap;">${p.nome}</div>
-        <svg id="bc"></svg>
-      </body></html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => {
-      JsBarcode(printWindow.document.getElementById('bc'), p.codigo, { format: 'CODE128', width: 1.2, height: 26, fontSize: 9, margin: 2 });
-      printWindow.print();
-    }, 200);
+  function imprimirEtiqueta(p) {
+    setEtiquetaImprimir(p);
   }
 
   return (
@@ -319,6 +325,15 @@ export default function EstoqueClient({ produtosIniciais, erroCarregamento }) {
           </div>
         </div>
       )}
+
+      <div id="print-area">
+        {etiquetaImprimir && (
+          <div style={{ width: 130, padding: 4, textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
+            <div style={{ fontSize: 9, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{etiquetaImprimir.nome}</div>
+            <svg ref={etiquetaBarcodeRef} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

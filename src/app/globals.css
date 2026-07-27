@@ -65,9 +65,10 @@ html, body { margin: 0; padding: 0; }
 /* ===== Impressão (sem abrir aba nova — evita travar a navegação no celular) ===== */
 #print-area { position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: hidden; }
 @media print {
-  body * { visibility: hidden; }
+  .sidebar, .mobile-overlay, .mobile-menu-btn { display: none !important; }
+  body * { visibility: hidden; position: static !important; }
   #print-area, #print-area * { visibility: visible; }
   #print-area {
-    position: absolute; top: 0; left: 0; width: 100%; height: auto; overflow: visible;
+    position: absolute !important; top: 0; left: 0; width: 100%; height: auto; overflow: visible;
   }
 }
