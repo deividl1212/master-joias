@@ -26,7 +26,7 @@ export default function ContasClient({ contasIniciais, fornecedores, erroCarrega
   const { toasts, showToast } = useToasts();
 
   const [contas, setContas] = useState(contasIniciais);
-  const [modalNovo, setModalNovo] = useState(false);
+  const [modalConta, setModalConta] = useState(null); // null | 'novo' | conta (objeto pra editar)
   const [modalExcluir, setModalExcluir] = useState(null);
   const [salvando, setSalvando] = useState(false);
   const [form, setForm] = useState({ fornecedor_id: '', categoria: CATEGORIAS[0], valor: '', descricao: '', status: 'Pendente', nota_fiscal: '', forma_pagamento: FORMAS_PAGAMENTO[0], data_vencimento: '' });
@@ -38,7 +38,21 @@ export default function ContasClient({ contasIniciais, fornecedores, erroCarrega
 
   function abrirNovo() {
     setForm({ fornecedor_id: fornecedores[0]?.id || '', categoria: CATEGORIAS[0], valor: '', descricao: '', status: 'Pendente', nota_fiscal: '', forma_pagamento: FORMAS_PAGAMENTO[0], data_vencimento: '' });
-    setModalNovo(true);
+    setModalConta('novo');
+  }
+
+  function abrirEditar(c) {
+    setForm({
+      fornecedor_id: c.fornecedor_id || '',
+      categoria: c.categoria,
+      valor: c.valor,
+      descricao: c.descricao || '',
+      status: c.status,
+      nota_fiscal: c.nota_fiscal || '',
+      forma_pagamento: c.forma_pagamento || FORMAS_PAGAMENTO[0],
+      data_vencimento: c.data_vencimento || '',
+    });
+    setModalConta(c);
   }
 
   async function salvarConta(e) {
@@ -46,7 +60,7 @@ export default function ContasClient({ contasIniciais, fornecedores, erroCarrega
     const valor = parseFloat(form.valor);
     if (!valor) { showToast('Informe o valor da conta.', 'error'); return; }
     setSalvando(true);
-    const { error } = await supabase.from('contas_pagar').insert({
+    const payload = {
       fornecedor_id: form.fornecedor_id || null,
       categoria: form.categoria,
       valor,
@@ -55,11 +69,25 @@ export default function ContasClient({ contasIniciais, fornecedores, erroCarrega
       nota_fiscal: form.nota_fiscal.trim(),
       forma_pagamento: form.forma_pagamento,
       data_vencimento: form.data_vencimento || null,
-    });
+    };
+    let error;
+    if (modalConta === 'novo') {
+      ({ error } = await supabase.from('contas_pagar').insert(payload));
+    } else {
+      ({ error } = await supabase.from('contas_pagar').update(payload).eq('id', modalConta.id));
+    }
     setSalvando(false);
     if (error) { showToast('Erro ao salvar conta: ' + error.message, 'error'); return; }
-    showToast('Conta cadastrada com sucesso.');
-    setModalNovo(false);
+    showToast(modalConta === 'novo' ? 'Conta cadastrada com sucesso.' : 'Conta atualizada com sucesso.');
+    setModalConta(null);
+    recarregar();
+  }
+
+  async function alternarStatus(c) {
+    const novoStatus = c.status === 'Pago' ? 'Pendente' : 'Pago';
+    const { error } = await supabase.from('contas_pagar').update({ status: novoStatus }).eq('id', c.id);
+    if (error) { showToast('Erro ao atualizar status: ' + error.message, 'error'); return; }
+    showToast(novoStatus === 'Pago' ? 'Conta marcada como paga.' : 'Conta marcada como pendente.');
     recarregar();
   }
 
@@ -118,6 +146,12 @@ export default function ContasClient({ contasIniciais, fornecedores, erroCarrega
                   <td style={ui.td}><span style={{ ...ui.badge, ...badgeColor[STATUS_COR[c.status]] }}>{c.status}</span></td>
                   <td style={ui.td}>
                     <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        title={c.status === 'Pago' ? 'Marcar como pendente' : 'Marcar como paga'}
+                        onClick={() => alternarStatus(c)}
+                        style={{ ...ui.iconBtn, color: c.status === 'Pago' ? '#8F6E3E' : '#5B7B5A' }}
+                      >{c.status === 'Pago' ? '↺' : '✓'}</button>
+                      <button title="Editar" onClick={() => abrirEditar(c)} style={ui.iconBtn}>✎</button>
                       <button title="Excluir" onClick={() => setModalExcluir(c)} style={{ ...ui.iconBtn, color: '#A85252' }}>✕</button>
                     </div>
                   </td>
@@ -128,10 +162,10 @@ export default function ContasClient({ contasIniciais, fornecedores, erroCarrega
         </div>
       </div>
 
-      {modalNovo && (
-        <div style={ui.overlay} onClick={() => setModalNovo(false)}>
+      {modalConta && (
+        <div style={ui.overlay} onClick={() => setModalConta(null)}>
           <form onClick={(e) => e.stopPropagation()} onSubmit={salvarConta} style={ui.modal}>
-            <div style={ui.modalHead}>Nova conta a pagar<button type="button" onClick={() => setModalNovo(false)} style={ui.closeBtn}>✕</button></div>
+            <div style={ui.modalHead}>{modalConta === 'novo' ? 'Nova conta a pagar' : 'Editar conta'}<button type="button" onClick={() => setModalConta(null)} style={ui.closeBtn}>✕</button></div>
             <div style={ui.modalBody}>
               <div style={ui.field}>
                 <label style={ui.label}>Fornecedor</label>
@@ -180,8 +214,8 @@ export default function ContasClient({ contasIniciais, fornecedores, erroCarrega
               </div>
             </div>
             <div style={ui.modalFoot}>
-              <button type="button" onClick={() => setModalNovo(false)} style={ui.btnGhost}>Cancelar</button>
-              <button type="submit" disabled={salvando} style={ui.btnGold}>{salvando ? 'Salvando...' : 'Salvar conta'}</button>
+              <button type="button" onClick={() => setModalConta(null)} style={ui.btnGhost}>Cancelar</button>
+              <button type="submit" disabled={salvando} style={ui.btnGold}>{salvando ? 'Salvando...' : (modalConta === 'novo' ? 'Salvar conta' : 'Salvar alterações')}</button>
             </div>
           </form>
         </div>
