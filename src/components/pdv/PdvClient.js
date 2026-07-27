@@ -281,6 +281,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
               </table>
             </div>
           </div>
+          </div>
 
         {/* CARRINHO */}
         <div style={{ ...ui.panel, border: '1.5px solid #B8935A', position: 'sticky', top: 84 }}>
