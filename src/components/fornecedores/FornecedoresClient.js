@@ -59,7 +59,7 @@ export default function FornecedoresClient({ fornecedoresIniciais, erroCarregame
 
       <div style={ui.toolbar}>
         <div>
-          <h1 style={ui.h1}>Fornecedores</h1>
+          <h1 style={ui.h1}>Fornecedores ou Colaboradores</h1>
           <p style={ui.sub}>{fornecedores.length} fornecedor(es) cadastrado(s)</p>
         </div>
         <button onClick={abrirNovo} style={ui.btnGold}>+ Novo fornecedor</button>

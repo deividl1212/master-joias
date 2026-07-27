@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Sidebar from './Sidebar';
+import ContasAlerta from './ui/ContasAlerta';
 
 export default function AppShell({ title, subtitle, children }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -9,6 +10,7 @@ export default function AppShell({ title, subtitle, children }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#FAF8F5' }}>
+      <ContasAlerta />
       <div className={`mobile-overlay${mobileOpen ? ' show' : ''}`} onClick={() => setMobileOpen(false)} />
       <Sidebar
         collapsed={collapsed}

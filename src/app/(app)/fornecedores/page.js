@@ -10,7 +10,7 @@ export default async function FornecedoresPage() {
     .order('criado_em', { ascending: false });
 
   return (
-    <AppShell title="Fornecedores" subtitle="Parceiros e fornecedores da loja">
+    <AppShell title="Fornecedores ou Colaboradores" subtitle="Parceiros e fornecedores da loja">
       <FornecedoresClient fornecedoresIniciais={fornecedores || []} erroCarregamento={error?.message} />
     </AppShell>
   );
