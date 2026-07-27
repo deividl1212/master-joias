@@ -32,6 +32,8 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
   const [sangriaValor, setSangriaValor] = useState('');
   const [sangriaMotivo, setSangriaMotivo] = useState('');
   const [modalFechar, setModalFechar] = useState(false);
+  const [modalExcluirVenda, setModalExcluirVenda] = useState(null);
+  const [excluindoVenda, setExcluindoVenda] = useState(false);
   const [modalConfirmar, setModalConfirmar] = useState(false);
   const [recibo, setRecibo] = useState(null);
   const [reciboParaImprimir, setReciboParaImprimir] = useState(null);
@@ -88,12 +90,34 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
     showToast('Sangria registrada com sucesso.');
   }
 
-  async function confirmarFecharCaixa() {
-    const { error } = await supabase.from('caixa').update({ aberto: false, fechado_em: new Date().toISOString() }).eq('id', caixa.id);
-    if (error) { showToast('Erro ao fechar caixa: ' + error.message, 'error'); return; }
-    setCaixa(null);
-    setModalFechar(false);
-    showToast('Caixa fechado com sucesso.');
+ async function confirmarExcluirVenda() {
+    setExcluindoVenda(true);
+    const venda = modalExcluirVenda;
+
+    // busca os itens da venda para devolver o estoque de cada produto
+    const { data: itensVenda } = await supabase.from('venda_itens').select('*').eq('venda_id', venda.id);
+
+    for (const item of itensVenda || []) {
+      if (!item.produto_id) continue;
+      const { data: produtoAtual } = await supabase.from('produtos').select('estoque, nome').eq('id', item.produto_id).single();
+      if (produtoAtual) {
+        const novoEstoque = (produtoAtual.estoque || 0) + item.quantidade;
+        await supabase.from('produtos').update({ estoque: novoEstoque }).eq('id', item.produto_id);
+        await supabase.from('movimentos_estoque').insert({
+          produto_id: item.produto_id, nome_produto: produtoAtual.nome, tipo: 'Entrada',
+          quantidade: item.quantidade, motivo: 'Estorno — venda excluída',
+        });
+      }
+    }
+
+    await supabase.from('venda_itens').delete().eq('venda_id', venda.id);
+    const { error } = await supabase.from('vendas').delete().eq('id', venda.id);
+    setExcluindoVenda(false);
+    if (error) { showToast('Erro ao excluir venda: ' + error.message, 'error'); return; }
+    showToast('Venda excluída e estoque devolvido com sucesso.');
+    setModalExcluirVenda(null);
+    recarregarVendas();
+    recarregarProdutos();
   }
 
   // ---------- CARRINHO ----------
@@ -244,6 +268,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button title="Visualizar comprovante" onClick={() => setRecibo({ ...v, itens: v.venda_itens })} style={ui.iconBtn}>👁</button>
                           <button title="Imprimir comprovante" onClick={() => imprimirRecibo(v, v.venda_itens)} style={ui.iconBtn}>▤</button>
+                          <button title="Excluir venda" onClick={() => setModalExcluirVenda(v)} style={{ ...ui.iconBtn, color: '#A85252' }}>✕</button>
                         </div>
                       </td>
                     </tr>
@@ -381,7 +406,25 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
           </div>
         </div>
       )}
-
+{/* MODAL EXCLUIR VENDA */}
+      {modalExcluirVenda && (
+        <div style={ui.overlay} onClick={() => setModalExcluirVenda(null)}>
+          <div onClick={(e) => e.stopPropagation()} style={ui.modalNarrow}>
+            <div style={ui.modalHead}>Excluir venda<button onClick={() => setModalExcluirVenda(null)} style={ui.closeBtn}>✕</button></div>
+            <div style={ui.modalBody}>
+              Tem certeza que deseja excluir a venda de <b>{modalExcluirVenda.cliente_nome}</b> no valor de <b>{brl(modalExcluirVenda.total)}</b>?
+              <br /><br />
+              <span style={{ fontSize: 12, color: '#9C9184' }}>
+                Essa ação não pode ser desfeita. O estoque dos produtos dessa venda será devolvido automaticamente.
+              </span>
+            </div>
+            <div style={ui.modalFoot}>
+              <button onClick={() => setModalExcluirVenda(null)} style={ui.btnGhost}>Cancelar</button>
+              <button onClick={confirmarExcluirVenda} disabled={excluindoVenda} style={ui.btnDanger}>{excluindoVenda ? 'Excluindo...' : 'Excluir venda'}</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* MODAL CONFIRMAR VENDA */}
       {modalConfirmar && (
         <div style={ui.overlay} onClick={() => !processando && setModalConfirmar(false)}>
