@@ -251,20 +251,24 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
           </div>
 
           <div style={{ ...ui.panel, marginTop: 18 }}>
-            <div style={{ padding: '16px 18px', borderBottom: '1px solid #E7E2D9', fontWeight: 700, fontSize: 14 }}>Últimas vendas</div>
+           <div style={{ padding: '16px 18px', borderBottom: '1px solid #E7E2D9', fontWeight: 700, fontSize: 14 }}>Últimas vendas</div>
             <div style={{ overflowX: 'auto' }}>
               <table style={ui.table}>
-                <thead><tr>{['Hora', 'Cliente', 'Total', 'Pagamento', ''].map((h) => <th key={h} style={ui.th}>{h}</th>)}</tr></thead>
+                <thead><tr>{['Data', 'Hora', 'Cliente', 'Produtos', 'Total', 'Pagamento', ''].map((h) => <th key={h} style={ui.th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {ultimasVendas.length === 0 ? (
-                    <tr><td colSpan={5} style={ui.emptyCell}>Nenhuma venda registrada ainda.</td></tr>
+                    <tr><td colSpan={7} style={ui.emptyCell}>Nenhuma venda registrada ainda.</td></tr>
                   ) : ultimasVendas.map((v) => (
                     <tr key={v.id}>
+                      <td style={ui.td}>{new Date(v.criado_em).toLocaleDateString('pt-BR')}</td>
                       <td style={ui.td}>{new Date(v.criado_em).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</td>
                       <td style={{ ...ui.td, fontWeight: 600 }}>{v.cliente_nome}</td>
+                      <td style={{ ...ui.td, whiteSpace: 'normal', maxWidth: 220 }}>
+                        {(v.venda_itens || []).map((i) => `${i.quantidade}x ${i.nome_produto}`).join(', ')}
+                      </td>
                       <td style={ui.td}>{brl(v.total)}</td>
                       <td style={ui.td}>{v.pagamento}</td>
-                     <td style={ui.td}>
+                      <td style={ui.td}>
                         <div style={{ display: 'flex', gap: 6 }}>
                           <button title="Visualizar comprovante" onClick={() => setRecibo({ ...v, itens: v.venda_itens })} style={ui.iconBtn}>👁</button>
                           <button title="Imprimir comprovante" onClick={() => imprimirRecibo(v, v.venda_itens)} style={ui.iconBtn}>▤</button>
@@ -277,7 +281,6 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
               </table>
             </div>
           </div>
-        </div>
 
         {/* CARRINHO */}
         <div style={{ ...ui.panel, border: '1.5px solid #B8935A', position: 'sticky', top: 84 }}>
