@@ -80,12 +80,16 @@ router.refresh();
           </button>
         </form>
       </div>
+      <div style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', fontSize: 11.5, color: '#000' }}>
+        Desenvolvido por Deivid Lima ©
+      </div>
     </div>
   );
 }
 
 const styles = {
   page: {
+    position: 'relative',
     minHeight: '100vh',
     display: 'flex',
     alignItems: 'center',

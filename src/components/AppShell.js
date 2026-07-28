@@ -29,6 +29,9 @@ export default function AppShell({ title, subtitle, children }) {
           </div>
         </div>
         <div className="content-pad" style={{ padding: 28 }}>{children}</div>
+        <div style={{ textAlign: 'center', fontSize: 11.5, color: '#000', padding: '10px 0 24px' }}>
+          Desenvolvido por Deivid Lima ©
+        </div>
       </main>
     </div>
   );
