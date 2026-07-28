@@ -6,10 +6,14 @@ import Toast from '@/components/ui/Toast';
 import { useToasts } from '@/hooks/useToasts';
 
 const MIN_ESTOQUE = 2;
-const CATEGORIAS = ['Anéis', 'Colares', 'Pulseiras', 'Brincos', 'Outras joias'];
+const CATEGORIAS = ['Anéis', 'Colares', 'Pulseiras', 'Brincos', 'Carteiras', 'Bolsas', 'Óculos', 'Lenços', 'Outras joias'];
 
 function brl(v) {
   return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+}
+
+function normalizar(str) {
+  return (str || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 }
 
 async function gerarCodigoInterno(supabase) {
@@ -60,9 +64,9 @@ export default function EstoqueClient({ produtosIniciais, erroCarregamento }) {
   }
 
   const listaFiltrada = useMemo(() => {
-    const termo = busca.toLowerCase();
+    const termo = normalizar(busca);
     return produtos.filter((p) =>
-      (p.nome.toLowerCase().includes(termo) || p.codigo.toLowerCase().includes(termo)) &&
+      (normalizar(p.nome).includes(termo) || normalizar(p.codigo).includes(termo)) &&
       (!filtroCategoria || p.categoria === filtroCategoria)
     );
   }, [produtos, busca, filtroCategoria]);
