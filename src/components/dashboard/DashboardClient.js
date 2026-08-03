@@ -15,6 +15,7 @@ export default function DashboardClient({ nomeUsuario }) {
   const supabase = createClient();
   const [mes, setMes] = useState(mesAtualStr());
   const [vendas, setVendas] = useState([]);
+  const [recebimentosPromissorias, setRecebimentosPromissorias] = useState([]);
   const [produtos, setProdutos] = useState([]);
   const [clientesNovos, setClientesNovos] = useState(0);
   const [contasMes, setContasMes] = useState(0);
@@ -27,13 +28,15 @@ export default function DashboardClient({ nomeUsuario }) {
     const inicio = new Date(ano, m - 1, 1).toISOString();
     const fim = new Date(ano, m, 1).toISOString();
 
-    const [{ data: v }, { data: p }, { count: novosClientes }, { data: contas }] = await Promise.all([
+    const [{ data: v }, { data: rp }, { data: p }, { count: novosClientes }, { data: contas }] = await Promise.all([
       supabase.from('vendas').select('*, venda_itens(*)').gte('criado_em', inicio).lt('criado_em', fim).order('criado_em', { ascending: false }),
+      supabase.from('promissoria_recebimentos').select('*').gte('criado_em', inicio).lt('criado_em', fim),
       supabase.from('produtos').select('*'),
       supabase.from('clientes').select('*', { count: 'exact', head: true }).gte('criado_em', inicio).lt('criado_em', fim),
       supabase.from('contas_pagar').select('valor'),
     ]);
     setVendas(v || []);
+    setRecebimentosPromissorias(rp || []);
     setProdutos(p || []);
     setClientesNovos(novosClientes || 0);
     setContasMes((contas || []).reduce((s, c) => s + c.valor, 0));
@@ -42,19 +45,25 @@ export default function DashboardClient({ nomeUsuario }) {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const faturamento = vendas.reduce((s, v) => s + v.total, 0);
+  const faturamentoVendas = vendas.reduce((s, v) => s + (v.pagamento === 'Promissória' ? (v.valor_entrada || 0) : v.total), 0);
+  const recebidoPromissorias = recebimentosPromissorias.reduce((s, r) => s + r.valor, 0);
+  const faturamento = faturamentoVendas + recebidoPromissorias;
+
   const lucroEstimado = faturamento * 0.45;
-  const ticketMedio = vendas.length ? faturamento / vendas.length : 0;
+  const ticketMedio = vendas.length ? vendas.reduce((s, v) => s + v.total, 0) / vendas.length : 0;
   const estoqueBaixo = produtos.filter((p) => p.estoque <= MIN_ESTOQUE).length;
 
   const [anoSel, mesSel] = mes.split('-').map(Number);
   const diasNoMes = new Date(anoSel, mesSel, 0).getDate();
   const vendasPorDia = Array.from({ length: diasNoMes }, (_, i) => {
     const dia = i + 1;
-    const total = vendas
+    const totalVendasDia = vendas
       .filter((v) => new Date(v.criado_em).getDate() === dia)
-      .reduce((s, v) => s + v.total, 0);
-    return { dia, total };
+      .reduce((s, v) => s + (v.pagamento === 'Promissória' ? (v.valor_entrada || 0) : v.total), 0);
+    const totalRecebidoDia = recebimentosPromissorias
+      .filter((r) => new Date(r.criado_em).getDate() === dia)
+      .reduce((s, r) => s + r.valor, 0);
+    return { dia, total: totalVendasDia + totalRecebidoDia };
   });
   const maiorValorDia = Math.max(...vendasPorDia.map((d) => d.total), 1);
 
@@ -84,7 +93,7 @@ export default function DashboardClient({ nomeUsuario }) {
     const html = `
       <div style="font-family:Inter,sans-serif; padding:24px;">
         <div style="display:flex; align-items:center; justify-content:center; flex-direction:column; margin-bottom:18px; text-align:center;">
-          <img src="/logo-master-joias.png" alt="Master Joias" style="height:60px; object-fit:contain; margin-bottom:8px;" />
+          <img src="/logo-master-joias.png" alt="Master Joias" style="height:80px; object-fit:contain; margin-bottom:8px;" />
           <h2 style="margin:0;">Faturamento Mensal</h2>
           <div style="font-size:13px; color:#726A5D; text-transform:capitalize;">${nomeMesExtenso()}</div>
         </div>
@@ -92,6 +101,7 @@ export default function DashboardClient({ nomeUsuario }) {
         <table style="width:100%; border-collapse:collapse; font-size:13px; margin-bottom:24px;">
           <tbody>
             <tr><td style="padding:6px; font-weight:600;">Faturamento do mês</td><td style="padding:6px;">${brl(faturamento)}</td></tr>
+            <tr><td style="padding:6px; font-weight:600;">Recebido de promissórias</td><td style="padding:6px;">${brl(recebidoPromissorias)}</td></tr>
             <tr><td style="padding:6px; font-weight:600;">Lucro estimado</td><td style="padding:6px;">${brl(lucroEstimado)}</td></tr>
             <tr><td style="padding:6px; font-weight:600;">Número de vendas</td><td style="padding:6px;">${vendas.length}</td></tr>
             <tr><td style="padding:6px; font-weight:600;">Ticket médio</td><td style="padding:6px;">${brl(ticketMedio)}</td></tr>
@@ -136,6 +146,7 @@ export default function DashboardClient({ nomeUsuario }) {
             <div style={ui.kpiCard}><div style={ui.kpiValue}>{brl(lucroEstimado)}</div><div style={ui.kpiLabel}>Lucro estimado do mês</div></div>
             <div style={ui.kpiCard}><div style={ui.kpiValue}>{vendas.length}</div><div style={ui.kpiLabel}>Vendas no mês</div></div>
             <div style={ui.kpiCard}><div style={ui.kpiValue}>{brl(ticketMedio)}</div><div style={ui.kpiLabel}>Ticket médio do mês</div></div>
+            <div style={ui.kpiCard}><div style={ui.kpiValue}>{brl(recebidoPromissorias)}</div><div style={ui.kpiLabel}>Recebido de promissórias no mês</div></div>
             <div style={ui.kpiCard}><div style={ui.kpiValue}>{produtos.length}</div><div style={ui.kpiLabel}>Produtos cadastrados</div></div>
             <div style={ui.kpiCard}><div style={ui.kpiValue}>{estoqueBaixo}</div><div style={ui.kpiLabel}>Produtos com estoque baixo</div></div>
             <div style={ui.kpiCard}><div style={ui.kpiValue}>{brl(contasMes)}</div><div style={ui.kpiLabel}>Contas a pagar</div></div>
