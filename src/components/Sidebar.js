@@ -37,6 +37,7 @@ const ICONS = {
   box: <path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8" />,
   cart: <path d="M3 9h18l-1.5 10.5a2 2 0 01-2 1.5H6.5a2 2 0 01-2-1.5L3 9zM8 9V6a4 4 0 018 0v3" />,
   coin: <path d="M12 12m-9 0a9 9 0 1018 0 9 9 0 10-18 0M12 7v10" />,
+  handshake: <path d="M9 11l2 2 4-4M3 6h18v12H3z" />,
   user: <path d="M12 8m-4 0a4 4 0 108 0 4 4 0 10-8 0M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8" />,
   truck: <path d="M3 7h18v13H3zM8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" />,
   trend: <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />,
