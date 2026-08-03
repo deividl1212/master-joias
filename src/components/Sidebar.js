@@ -12,6 +12,7 @@ const NAV_GROUPS = [
       { href: '/pdv', label: 'PDV / Vendas', icon: 'cart' },
       { href: '/estoque', label: 'Estoque', icon: 'box' },
       { href: '/faturamento', label: 'Faturamento do Dia', icon: 'coin' },
+      { href: '/promissorias', label: 'Promissórias', icon: 'handshake' },
       { href: '/dashboard', label: 'Faturamento Mensal', icon: 'grid' },
     ],
   },
