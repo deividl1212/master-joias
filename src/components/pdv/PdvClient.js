@@ -6,7 +6,7 @@ import Toast from '@/components/ui/Toast';
 import { useToasts } from '@/hooks/useToasts';
 import { ui, brl } from '@/lib/uiStyles';
 
-const FORMAS_PAGAMENTO = ['Pix', 'Dinheiro', 'Débito', 'Crédito'];
+const FORMAS_PAGAMENTO = ['Pix', 'Dinheiro', 'Débito', 'Crédito', 'Promissória'];
 
 export default function PdvClient({ produtosIniciais, clientesIniciais, caixaInicial, ultimasVendasIniciais }) {
   const supabase = createClient();
@@ -24,6 +24,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
   const [acrescimo, setAcrescimo] = useState('');
   const [pagamento, setPagamento] = useState('Pix');
   const [parcelas, setParcelas] = useState(1);
+  const [valorEntrada, setValorEntrada] = useState('');
   const [processando, setProcessando] = useState(false);
 
   const [modalAbrirCaixa, setModalAbrirCaixa] = useState(false);
@@ -92,7 +93,6 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
     setExcluindoVenda(true);
     const venda = modalExcluirVenda;
 
-    // busca os itens da venda para devolver o estoque de cada produto
     const { data: itensVenda } = await supabase.from('venda_itens').select('*').eq('venda_id', venda.id);
 
     for (const item of itensVenda || []) {
@@ -157,6 +157,11 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
   function abrirConfirmacao() {
     if (!caixa) { showToast('Abra o caixa antes de iniciar uma venda.', 'error'); return; }
     if (cart.length === 0) { showToast('Adicione ao menos um produto ao carrinho.', 'error'); return; }
+    if (pagamento === 'Promissória') {
+      if (!clienteNome.trim()) { showToast('Informe o nome do cliente para registrar a promissória.', 'error'); return; }
+      const entrada = parseFloat(valorEntrada) || 0;
+      if (entrada < 0 || entrada > total) { showToast('O valor de entrada não pode ser maior que o total da venda.', 'error'); return; }
+    }
     setModalConfirmar(true);
   }
 
@@ -166,15 +171,31 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
       ? clientes.find((c) => c.nome.toLowerCase() === clienteNome.trim().toLowerCase())
       : null;
 
+    const ehPromissoria = pagamento === 'Promissória';
+    const valorEntradaFinal = ehPromissoria ? Math.min(parseFloat(valorEntrada) || 0, total) : total;
+    const valorPromissoriaFinal = ehPromissoria ? Math.max(total - valorEntradaFinal, 0) : 0;
+
     const { data: venda, error: erroVenda } = await supabase.from('vendas').insert({
       caixa_id: caixa.id,
       cliente_nome: clienteNome.trim() || 'Cliente não identificado',
       cliente_id: clienteExistente?.id || null,
       subtotal, desconto: parseFloat(desconto) || 0, acrescimo: parseFloat(acrescimo) || 0, total,
       pagamento, parcelas: pagamento === 'Crédito' ? parcelas : 1,
+      valor_entrada: valorEntradaFinal, valor_promissoria: valorPromissoriaFinal,
     }).select().single();
 
     if (erroVenda) { setProcessando(false); showToast('Erro ao registrar venda: ' + erroVenda.message, 'error'); return; }
+
+    if (ehPromissoria && valorPromissoriaFinal > 0) {
+      await supabase.from('promissorias').insert({
+        venda_id: venda.id,
+        cliente_id: clienteExistente?.id || null,
+        cliente_nome: clienteNome.trim() || 'Cliente não identificado',
+        valor_total: valorPromissoriaFinal,
+        saldo_devedor: valorPromissoriaFinal,
+        status: 'Pendente',
+      });
+    }
 
     const itensPayload = cart.map((i) => ({ venda_id: venda.id, produto_id: i.produto_id, nome_produto: i.nome, quantidade: i.qty, preco_unitario: i.preco }));
     await supabase.from('venda_itens').insert(itensPayload);
@@ -202,6 +223,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
     setAcrescimo('');
     setPagamento('Pix');
     setParcelas(1);
+    setValorEntrada('');
     recarregarProdutos();
     recarregarVendas();
   }
@@ -217,7 +239,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
         <div style="text-align:center; font-size:11px; color:#726A5D;">${new Date(venda.criado_em || Date.now()).toLocaleString('pt-BR')}</div>
         <hr>
         <div style="font-size:12px;">Cliente: ${venda.cliente_nome}</div>
-        <div style="font-size:12px;">Pagamento: ${venda.pagamento}${venda.parcelas > 1 ? ` (${venda.parcelas}x de ${brl(venda.total / venda.parcelas)})` : ''}</div>
+        <div style="font-size:12px;">Pagamento: ${venda.pagamento}${venda.parcelas > 1 ? ` (${venda.parcelas}x de ${brl(venda.total / venda.parcelas)})` : ''}${venda.pagamento === 'Promissória' && venda.valor_promissoria > 0 ? ` — entrada de ${brl(venda.valor_entrada)}, restante de ${brl(venda.valor_promissoria)} em promissória` : ''}</div>
         <hr>
         ${linhasItens}
         <hr>
@@ -332,6 +354,22 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
                 <select value={parcelas} onChange={(e) => setParcelas(parseInt(e.target.value))} style={ui.input}>
                   {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}x {n > 1 ? `de ${brl(total / n)}` : '(à vista)'}</option>)}
                 </select>
+              </div>
+            )}
+
+            {pagamento === 'Promissória' && (
+              <div style={ui.field}>
+                <label style={ui.label}>Valor de entrada (R$)</label>
+                <input type="number" step="0.01" value={valorEntrada} onChange={(e) => setValorEntrada(e.target.value)} style={ui.input} placeholder="0,00" />
+                <div style={ui.hint}>
+                  {(() => {
+                    const entrada = Math.min(parseFloat(valorEntrada) || 0, total);
+                    const financiado = Math.max(total - entrada, 0);
+                    return financiado > 0
+                      ? `Restam ${brl(financiado)} em aberto na conta de ${clienteNome.trim() || 'cliente'} (promissória).`
+                      : 'Sem valor financiado — a venda inteira será paga agora.';
+                  })()}
+                </div>
               </div>
             )}
 
@@ -459,6 +497,16 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
             <div style={ui.modalBody}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0' }}><span>Cliente</span><span>{clienteNome || 'Não identificado'}</span></div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0' }}><span>Pagamento</span><span>{pagamento}{pagamento === 'Crédito' && parcelas > 1 ? ` em ${parcelas}x` : ''}</span></div>
+              {pagamento === 'Promissória' && (() => {
+                const entrada = Math.min(parseFloat(valorEntrada) || 0, total);
+                const financiado = Math.max(total - entrada, 0);
+                return (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0' }}><span>Entrada (paga agora)</span><span>{brl(entrada)}</span></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '4px 0', color: '#A85252' }}><span>Fica na promissória</span><span>{brl(financiado)}</span></div>
+                  </>
+                );
+              })()}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 19, fontWeight: 800, marginTop: 8 }}><span>Total a pagar</span><span>{brl(total)}</span></div>
             </div>
             <div style={ui.modalFoot}>
@@ -483,6 +531,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
               <div style={{ fontSize: 12.5, marginBottom: 8 }}>
                 Pagamento: {recibo.pagamento}
                 {recibo.parcelas > 1 ? ` (${recibo.parcelas}x de ${brl(recibo.total / recibo.parcelas)})` : ''}
+                {recibo.pagamento === 'Promissória' && recibo.valor_promissoria > 0 ? ` — entrada de ${brl(recibo.valor_entrada)}, restante de ${brl(recibo.valor_promissoria)} em promissória` : ''}
               </div>
               <hr style={{ border: 'none', borderTop: '1px dashed #E7E2D9', margin: '8px 0' }} />
               {(recibo.itens || []).map((i, idx) => (
@@ -504,9 +553,8 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
           </div>
         </div>
       )}
-      {/* ÁREA DE IMPRESSÃO — fica escondida na tela, só aparece no papel/PDF de impressão.
-          O conteúdo é injetado direto via ref no exato instante do clique (sem delay),
-          o que evita o bloqueio de "impressão automática" do Safari no iPhone. */}
+
+      {/* ÁREA DE IMPRESSÃO */}
       <div id="print-area" ref={printAreaRef}></div>
     </div>
   );
