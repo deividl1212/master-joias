@@ -108,6 +108,7 @@ export default function PdvClient({ produtosIniciais, clientesIniciais, caixaIni
       }
     }
 
+    await supabase.from('promissorias').delete().eq('venda_id', venda.id);
     await supabase.from('venda_itens').delete().eq('venda_id', venda.id);
     const { error } = await supabase.from('vendas').delete().eq('id', venda.id);
     setExcluindoVenda(false);
