@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { createClient } from '@/utils/supabase/server';
 import AppShell from '@/components/AppShell';
 import FaturamentoClient from '@/components/faturamento/FaturamentoClient';
